@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --no-automatic-dbgsym
+
+override_dh_auto_build:
+	cd tzfpy \
+	&& mkdir -p .cargo \
+	&& cargo vendor > .cargo/config.toml \
+	&& maturin build \
+		--release \
+		--offline \
+		--interpreter python3
+
+override_dh_auto_install:
+	pip3 install \
+		--target=$(CURDIR)/debian/python3-tzfpy/usr/lib/python3/dist-packages \
+		--no-compile \
+		--no-deps \
+		--no-cache-dir \
+		--disable-pip-version-check \
+		tzfpy/target/wheels/*.whl

@@ -1,0 +1,5 @@
+python3-tzfpy (0.16.4-1) unstable; urgency=medium
+
+  * Initial Debian package.
+
+ -- Oleg Höfling <oleg.hoefling@gmail.com>  Sat, 07 Feb 2026 20:46:08 +0000

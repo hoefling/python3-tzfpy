@@ -1,0 +1,3 @@
+[submodule "tzfpy"]
+	path = tzfpy
+	url = https://github.com/ringsaturn/tzfpy.git

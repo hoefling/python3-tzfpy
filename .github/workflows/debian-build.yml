@@ -1,0 +1,106 @@
+name: Build Debian package
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: debian:13.3
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      DEBIAN_FRONTEND: 'noninteractive'
+    steps:
+    - name: Install build dependencies
+      run: |
+        apt update
+        apt install -y \
+          debhelper \
+          devscripts \
+          dh-python \
+          git \
+          python3-all \
+          python3-maturin \
+          python3-pip \
+          cargo \
+          rustc
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        submodules: recursive
+
+    - name: Setup non-root user
+      run: |
+        useradd -m builder
+        mkdir -p /home/builder/.cache
+        chown -R builder:builder /home/builder
+        chown -R builder:builder $GITHUB_WORKSPACE/..
+      shell: bash
+
+    - name: Show versions (debug)
+      run: |
+        python3 --version
+        debuild --version
+
+    - name: Build package
+      run: |
+        su builder -c "
+        debuild -us -uc -b
+        mkdir artifacts
+        cp ../*.deb artifacts/
+        cp ../*.changes artifacts/
+        cp ../*.buildinfo artifacts/
+        "
+
+    - name: Run lintian
+      run: |
+        su builder -c "
+        lintian artifacts/*.changes
+        "
+
+    - name: Upload .deb artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: deb-${{ matrix.arch }}
+        path: artifacts/*
+
+  release:
+    name: Create GitHub release
+    needs: build-deb
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+
+      - name: Trigger APT repo import
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: import-release.yml
+          repo: hoefling/apt
+          ref: refs/heads/main
+          inputs: '{"repo":"${{ github.repository }}","version":"${{ github.ref_name }}"}'
+          token: ${{ secrets.APT_REPO_TOKEN }}
