@@ -10,12 +10,7 @@ Build-Depends:
  python3-maturin,
  python3-pip,
  cargo,
- rustc,
- pkg-config,
- librust-lazy-static-dev (>= 1.5.0-1),
- librust-pyo3-dev (>= 0.22.6-3),
- librust-pyo3-ffi-dev,
- librust-pyo3-macros-dev
+ rustc
 Standards-Version: 4.7.2
 Homepage: https://github.com/ringsaturn/tzfpy
 
